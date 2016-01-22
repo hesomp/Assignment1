@@ -3,24 +3,16 @@ package com.company;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.IOException;
-import java.util.Dictionary;
-import java.util.HashMap;
-import java.util.Random;
 
-import weka.classifiers.Classifier;
+import java.util.HashMap;
 import weka.classifiers.Evaluation;
 import weka.classifiers.evaluation.NominalPrediction;
-import weka.classifiers.rules.DecisionTable;
-import weka.classifiers.rules.PART;
-import weka.classifiers.trees.DecisionStump;
+import weka.classifiers.functions.MultilayerPerceptron;
 import weka.classifiers.trees.J48;
 import weka.core.FastVector;
 import weka.core.Instances;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
-import weka.gui.treevisualizer.PlaceNode2;
-import weka.gui.treevisualizer.TreeVisualizer;
 
 public class Main {
 
@@ -32,13 +24,14 @@ public class Main {
         //split into training and test datasets
         HashMap<String, Instances> datasets = getTrainingandTestInstances(ds);
 
+/*
+        System.out.format("The value of i is: %f\n",  decisionTree(datasets, (float).1, false));
+        System.out.format("The value of i is: %f\n",  decisionTree(datasets, (float).2, false));
+        System.out.format("The value of i is: %f\n",  decisionTree(datasets, (float).3, false));
+        System.out.format("The value of i is: %f\n",  decisionTree(datasets, (float).4, false));
+*/
 
-        System.out.format("The value of i is: %f",  decisionTree(datasets, (float).1, false));
-        System.out.format("The value of i is: %f",  decisionTree(datasets, (float).2, false));
-        System.out.format("The value of i is: %f",  decisionTree(datasets, (float).3, false));
-        System.out.format("The value of i is: %f",  decisionTree(datasets, (float).4, false));
-
-
+        System.out.format("The value of i is: %f\n", neuralNetwork(datasets));
 
     }
 
@@ -78,7 +71,39 @@ public class Main {
 
         model.buildClassifier(train);
 
-        System.out.println(model.listOptions());
+        evaluation.evaluateModel(model, test);
+
+        FastVector predictions = new FastVector();
+
+        predictions.appendElements(evaluation.predictions());
+
+        double correct= 0;
+        for (int i = 0; i < predictions.size(); i++) {
+            NominalPrediction np = (NominalPrediction) predictions.elementAt(i);
+            if (np.predicted() == np.actual()) {
+                correct++;
+            }
+        }
+
+        return (100 * correct / predictions.size());
+
+
+    }
+
+
+    public  static double neuralNetwork(HashMap<String, Instances> datasets) throws Exception{
+
+        MultilayerPerceptron model = new MultilayerPerceptron();
+
+
+
+        Instances train = datasets.get("train");
+        Instances test = datasets.get("test") ;
+
+
+        Evaluation evaluation = new Evaluation(train);
+
+        model.buildClassifier(train);
 
         evaluation.evaluateModel(model, test);
 
@@ -98,6 +123,8 @@ public class Main {
 
 
     }
+
+
 
 
     public static Instances getAdultDataset() throws Exception{
