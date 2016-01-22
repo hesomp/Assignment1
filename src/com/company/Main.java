@@ -13,12 +13,14 @@ import weka.core.FastVector;
 import weka.core.Instances;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
+import weka.filters.unsupervised.instance.RemoveRange;
 
 public class Main {
 
     public static void main(String[] args) throws Exception {
 
         Instances ds = getAdultDataset();
+
 
 
         //split into training and test datasets
@@ -101,6 +103,7 @@ public class Main {
         Instances test = datasets.get("test") ;
 
 
+
         Evaluation evaluation = new Evaluation(train);
 
         model.buildClassifier(train);
@@ -119,18 +122,19 @@ public class Main {
             }
         }
 
+
+        System.out.println(evaluation.toSummaryString("\nResults\n======\n", false));
+
         return (100 * correct / predictions.size());
 
 
     }
 
 
-
-
     public static Instances getAdultDataset() throws Exception{
 
         Instances retVal;
-        BufferedReader datafile = readDataFile("adult.arff");
+        BufferedReader datafile = readDataFile("adult_small.arff");
 
 
         Instances data = new Instances(datafile);
@@ -148,7 +152,6 @@ public class Main {
 
     }
 
-
     public static BufferedReader readDataFile(String filename) {
         BufferedReader inputReader = null;
 
@@ -159,6 +162,17 @@ public class Main {
         }
 
         return inputReader;
+    }
+
+    private static Instances selectSubSample(Instances data)throws Exception{
+
+        RemoveRange splitFilter = new RemoveRange();
+        splitFilter.setInvertSelection(true);
+        Instances subSample = data;
+        splitFilter.setInputFormat(subSample);
+        //splitFilter.setInstancesIndices(selectIndices(subSample));
+        subSample = Filter.useFilter(subSample, splitFilter);
+        return subSample;
     }
 
 
