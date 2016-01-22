@@ -4,6 +4,9 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Dictionary;
+import java.util.HashMap;
+import java.util.Random;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
@@ -25,25 +28,59 @@ public class Main {
 
         Instances ds = getAdultDataset();
 
-        //randomize dataset
-        ds.randomize(new java.util.Random(0));
 
         //split into training and test datasets
-        int trainSize = (int) Math.round(ds.numInstances() * 0.8);
-        int testSize = ds.numInstances() - trainSize;
-        Instances train = new Instances(ds, 0, trainSize);
-        Instances test = new Instances(ds, trainSize, testSize);
+        HashMap<String, Instances> datasets = getTrainingandTestInstances(ds);
+
+
+        System.out.format("The value of i is: %f",  decisionTree(datasets, (float).1, false));
+        System.out.format("The value of i is: %f",  decisionTree(datasets, (float).2, false));
+        System.out.format("The value of i is: %f",  decisionTree(datasets, (float).3, false));
+        System.out.format("The value of i is: %f",  decisionTree(datasets, (float).4, false));
 
 
 
+    }
 
-        J48 decisonTreeModel = new J48();
+
+    public  static HashMap<String, Instances> getTrainingandTestInstances(Instances dataset){
+
+        HashMap<String, Instances> retVal = new HashMap<>();
+
+        dataset.randomize(new java.util.Random(0));
+
+        int trainSize = (int) Math.round(dataset.numInstances() * 0.8);
+        int testSize = dataset.numInstances() - trainSize;
+        Instances train = new Instances(dataset, 0, trainSize);
+        Instances test = new Instances(dataset, trainSize, testSize);
+
+        //System.out.println(test);
+
+        retVal.put("train", train);
+        retVal.put("test", test);
+
+        return retVal;
+    }
+
+    public  static double decisionTree(HashMap<String, Instances> datasets, float confidence, boolean unpruned) throws Exception{
+
+        J48 model = new J48();
+
+        model.setUnpruned(unpruned);
+
+        model.setConfidenceFactor(confidence);
+
+        Instances train = datasets.get("train");
+        Instances test = datasets.get("test") ;
 
 
         Evaluation evaluation = new Evaluation(train);
 
-        decisonTreeModel.buildClassifier(train);
-        evaluation.evaluateModel(decisonTreeModel, test);
+        model.buildClassifier(train);
+
+        System.out.println(model.listOptions());
+
+        evaluation.evaluateModel(model, test);
 
         FastVector predictions = new FastVector();
 
@@ -57,8 +94,7 @@ public class Main {
             }
         }
 
-        double accuracy = 100 * correct / predictions.size();
-         System.out.print(accuracy);
+        return (100 * correct / predictions.size());
 
 
     }
