@@ -122,7 +122,7 @@ public class Main {
         Resample r = new Resample();
         r.setNoReplacement(true);
         r.setSampleSizePercent(5);
-        r.setInputFormat(data);
+        r.setInputFormat(data); 
 
        return Filter.useFilter(data, r);
     }
