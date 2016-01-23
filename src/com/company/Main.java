@@ -53,7 +53,7 @@ public class Main {
     }
 
 
-    public  static HashMap<String, Instances> getTrainingandTestInstances(Instances dataset){
+    private   static HashMap<String, Instances> getTrainingandTestInstances(Instances dataset){
 
         HashMap<String, Instances> retVal = new HashMap<>();
 
@@ -72,7 +72,7 @@ public class Main {
         return retVal;
     }
 
-    public  static double decisionTree(HashMap<String, Instances> datasets, float confidence, boolean unpruned) throws Exception{
+    private   static double decisionTree(HashMap<String, Instances> datasets, float confidence, boolean unpruned) throws Exception{
 
         StopWatch st = new StopWatch();
 
@@ -125,7 +125,7 @@ public class Main {
     }
 
 
-    public  static Instances resample(Instances data) throws Exception {
+    private   static Instances resample(Instances data) throws Exception {
 
 
         Resample r = new Resample();
@@ -137,7 +137,7 @@ public class Main {
     }
 
 
-    public  static double neuralNetwork(HashMap<String, Instances> datasets) throws Exception{
+    private   static double neuralNetwork(HashMap<String, Instances> datasets) throws Exception{
 
         MultilayerPerceptron model = new MultilayerPerceptron();
 
@@ -174,7 +174,7 @@ public class Main {
 
     }
 
-    public  static double boostedDecisiontree(HashMap<String, Instances> datasets) throws Exception{
+    private   static double boostedDecisiontree(HashMap<String, Instances> datasets) throws Exception{
 
         AdaBoostM1 model = new AdaBoostM1();
 
@@ -211,7 +211,7 @@ public class Main {
 
 
 
-    public  static double svm(HashMap<String, Instances> datasets) throws Exception{
+    private   static double svm(HashMap<String, Instances> datasets) throws Exception{
 
         SMO model = new SMO();
 
@@ -246,7 +246,7 @@ public class Main {
 
     }
 
-    public static double knn(HashMap<String, Instances> datasets, int distance) throws Exception{
+    private static double knn(HashMap<String, Instances> datasets, int distance) throws Exception{
 
         IBk model = new IBk();
 
@@ -282,7 +282,7 @@ public class Main {
     }
 
 
-    public static Instances getAdultDataset() throws Exception{
+    private static Instances getAdultDataset() throws Exception{
 
         Instances retVal;
         BufferedReader datafile = readDataFile("adult.arff");
@@ -303,7 +303,7 @@ public class Main {
 
     }
 
-    public static BufferedReader readDataFile(String filename) {
+    private static BufferedReader readDataFile(String filename) {
         BufferedReader inputReader = null;
 
         try {
@@ -313,17 +313,6 @@ public class Main {
         }
 
         return inputReader;
-    }
-
-    private static Instances selectSubSample(Instances data)throws Exception{
-
-        RemoveRange splitFilter = new RemoveRange();
-        splitFilter.setInvertSelection(true);
-        Instances subSample = data;
-        splitFilter.setInputFormat(subSample);
-        //splitFilter.setInstancesIndices(selectIndices(subSample));
-        subSample = Filter.useFilter(subSample, splitFilter);
-        return subSample;
     }
 
 
