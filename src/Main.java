@@ -16,7 +16,6 @@ import weka.core.FastVector;
 import weka.core.Instances;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
-import weka.filters.unsupervised.instance.RemoveRange;
 import weka.filters.unsupervised.instance.Resample;
 
 
@@ -34,19 +33,21 @@ public class Main {
         //split into training and test datasets
         HashMap<String, Instances> datasets = getTrainingandTestInstances(ds);
 
-/*
+
         System.out.format("The value of i is: %f\n",  decisionTree(datasets, (float).1, false));
         System.out.format("The value of i is: %f\n",  decisionTree(datasets, (float).2, false));
         System.out.format("The value of i is: %f\n",  decisionTree(datasets, (float).3, false));
         System.out.format("The value of i is: %f\n",  decisionTree(datasets, (float).4, false));
 
-      // System.out.format("The value of i is: %f\n", neuralNetwork(datasets));
+      System.out.format("The value of i is: %f\n", neuralNetwork(datasets));
 
         System.out.format("The value of i is: %f\n", boostedDecisiontree(datasets));
 
         System.out.format("The value of i is: %f\n", svm(datasets));
-*/
-        System.out.format("The value of i is: %f\n", knn(datasets,8));
+
+        System.out.format("The value of i is: %f\n", knn(datasets,1));
+        System.out.format("The value of i is: %f\n", knn(datasets,3));
+        System.out.format("The value of i is: %f\n", knn(datasets,5));
 
     }
 
@@ -115,18 +116,16 @@ public class Main {
 
     }
 
-
     private   static Instances resample(Instances data) throws Exception {
 
 
         Resample r = new Resample();
         r.setNoReplacement(true);
-        r.setSampleSizePercent(25);
+        r.setSampleSizePercent(5);
         r.setInputFormat(data);
 
        return Filter.useFilter(data, r);
     }
-
 
     private   static double neuralNetwork(HashMap<String, Instances> datasets) throws Exception{
 
@@ -200,8 +199,6 @@ public class Main {
 
     }
 
-
-
     private   static double svm(HashMap<String, Instances> datasets) throws Exception{
 
         SMO model = new SMO();
@@ -272,7 +269,6 @@ public class Main {
 
     }
 
-
     private static Instances getAdultDataset() throws Exception{
 
         Instances retVal;
@@ -305,9 +301,5 @@ public class Main {
 
         return inputReader;
     }
-
-
-
-
 
 }
