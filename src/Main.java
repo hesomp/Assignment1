@@ -3,6 +3,7 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 
+import java.io.IOException;
 import java.util.HashMap;
 
 import weka.classifiers.Evaluation;
@@ -23,15 +24,8 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
 
-        Instances ds = getAdultDataset();
-
-
-        ds = resample(ds);
-
-
-
         //split into training and test datasets
-        HashMap<String, Instances> datasets = getTrainingandTestInstances(ds);
+        HashMap<String, Instances> datasets = getTrainingandTestInstances("Adult");
 
 
         System.out.format("The value of i is: %f\n",  decisionTree(datasets, (float).1, false));
@@ -51,19 +45,34 @@ public class Main {
 
     }
 
+    private   static HashMap<String, Instances> getTrainingandTestInstances(String dataset) throws IOException {
 
-    private   static HashMap<String, Instances> getTrainingandTestInstances(Instances dataset){
 
         HashMap<String, Instances> retVal = new HashMap<>();
+        Instances train;
+        Instances test;
+        BufferedReader trainfile = null;
+        BufferedReader testfile = null;
 
-        dataset.randomize(new java.util.Random(0));
 
-        int trainSize = (int) Math.round(dataset.numInstances() * 0.8);
-        int testSize = dataset.numInstances() - trainSize;
-        Instances train = new Instances(dataset, 0, trainSize);
-        Instances test = new Instances(dataset, trainSize, testSize);
+        if (dataset.equals("Adult")){
 
-        //System.out.println(test);
+             trainfile = readDataFile("datasets/adult_train.arff");
+             testfile = readDataFile("datasets/adult_test.arff");
+
+        }else if (dataset.equals("Cancer")){
+
+             trainfile = readDataFile("datasets/adult_train.arff");
+             testfile = readDataFile("datasets/adult_test.arff");
+
+        }
+
+
+        train = new Instances(trainfile);
+        test = new Instances(testfile);
+
+        train.setClassIndex(train.numAttributes() - 1);
+        test.setClassIndex(test.numAttributes() - 1);
 
         retVal.put("train", train);
         retVal.put("test", test);
@@ -122,7 +131,7 @@ public class Main {
         Resample r = new Resample();
         r.setNoReplacement(true);
         r.setSampleSizePercent(5);
-        r.setInputFormat(data); 
+        r.setInputFormat(data);
 
        return Filter.useFilter(data, r);
     }
