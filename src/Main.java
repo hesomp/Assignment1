@@ -1,9 +1,11 @@
 
+import java.awt.*;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.HashMap;
 
 import weka.classifiers.Evaluation;
@@ -18,6 +20,8 @@ import weka.core.Instances;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
 import weka.filters.unsupervised.instance.Resample;
+import weka.gui.treevisualizer.PlaceNode2;
+import weka.gui.treevisualizer.TreeVisualizer;
 
 
 public class Main {
@@ -26,6 +30,9 @@ public class Main {
 
         //split into training and test datasets
         HashMap<String, Instances> datasets = getTrainingandTestInstances("Adult");
+
+        Date d = new Date(System.currentTimeMillis());
+        System.out.print("start=" + d);
 
 
         System.out.format("The value of i is: %f\n",  decisionTree(datasets, (float).1, false));
@@ -43,6 +50,9 @@ public class Main {
         System.out.format("The value of i is: %f\n", knn(datasets,3));
         System.out.format("The value of i is: %f\n", knn(datasets,5));
 
+
+        Date d2 = new Date(System.currentTimeMillis());
+        System.out.print("end=" + d2);
     }
 
     private   static HashMap<String, Instances> getTrainingandTestInstances(String dataset) throws IOException {
@@ -104,24 +114,30 @@ public class Main {
 
 
 
-        FastVector predictions = new FastVector();
-
-        predictions.appendElements(evaluation.predictions());
-
-        double correct= 0;
-        for (int i = 0; i < predictions.size(); i++) {
-            NominalPrediction np = (NominalPrediction) predictions.elementAt(i);
-            if (np.predicted() == np.actual()) {
-                correct++;
-            }
-        }
-
-
         System.out.println(evaluation.toSummaryString("\nResults\n======\n", false));
 
+/*
+        // display classifier
+        final javax.swing.JFrame jf =
+                new javax.swing.JFrame("Weka Classifier Tree Visualizer: J48");
+        jf.setSize(1000,800);
+        jf.getContentPane().setLayout(new BorderLayout());
+        TreeVisualizer tv = new TreeVisualizer(null,
+                model.graph(),
+                new PlaceNode2());
+        jf.getContentPane().add(tv, BorderLayout.CENTER);
+        jf.addWindowListener(new java.awt.event.WindowAdapter() {
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                jf.dispose();
+            }
+        });
 
-        return (100 * correct / predictions.size());
+        jf.setVisible(true);
+        tv.fitToScreen();
 
+        */
+
+return 0;
 
     }
 
