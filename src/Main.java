@@ -7,11 +7,14 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Random;
 
+import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
 import weka.classifiers.evaluation.NominalPrediction;
 import weka.classifiers.functions.MultilayerPerceptron;
 import weka.classifiers.functions.SMO;
+import weka.classifiers.functions.supportVector.Kernel;
 import weka.classifiers.lazy.IBk;
 import weka.classifiers.meta.AdaBoostM1;
 import weka.classifiers.trees.J48;
@@ -29,30 +32,89 @@ public class Main {
     public static void main(String[] args) throws Exception {
 
         //split into training and test datasets
+        System.out.println("Adult Dataset");
         HashMap<String, Instances> datasets = getTrainingandTestInstances("Adult");
-
-        Date d = new Date(System.currentTimeMillis());
-        System.out.print("start=" + d);
+       // RunLearningAlgorithms(datasets);
 
 
-        System.out.format("The value of i is: %f\n",  decisionTree(datasets, (float).1, false));
-        System.out.format("The value of i is: %f\n",  decisionTree(datasets, (float).2, false));
-        System.out.format("The value of i is: %f\n",  decisionTree(datasets, (float).3, false));
-        System.out.format("The value of i is: %f\n",  decisionTree(datasets, (float).4, false));
-
-      System.out.format("The value of i is: %f\n", neuralNetwork(datasets));
-
-        System.out.format("The value of i is: %f\n", boostedDecisiontree(datasets));
-
-        System.out.format("The value of i is: %f\n", svm(datasets));
-
-        System.out.format("The value of i is: %f\n", knn(datasets,1));
-        System.out.format("The value of i is: %f\n", knn(datasets,3));
-        System.out.format("The value of i is: %f\n", knn(datasets,5));
+        datasets.clear();
+        System.out.println("Cancer Dataset");
+        datasets = getTrainingandTestInstances("Cancer");
+        RunLearningAlgorithms(datasets);
 
 
-        Date d2 = new Date(System.currentTimeMillis());
-        System.out.print("end=" + d2);
+    }
+
+    public static void RunLearningAlgorithms( HashMap<String, Instances> datasets) throws Exception {
+
+
+        decisionTree(datasets, (float)0, true);
+
+        decisionTree(datasets, (float).01, false);
+        decisionTree(datasets, (float).1, false);
+        decisionTree(datasets, (float).2, false);
+        decisionTree(datasets, (float).3, false);
+        decisionTree(datasets, (float).4, false);
+        decisionTree(datasets, (float).5, false);
+
+        neuralNetwork(datasets, 500, .2, .3);
+        neuralNetwork(datasets, 1000, .2, .3);
+        neuralNetwork(datasets, 2500, .2, .3);
+        neuralNetwork(datasets, 5000, .2, .3);
+
+        neuralNetwork(datasets, 500, .4, .6);
+        neuralNetwork(datasets, 1000, .4, .6);
+        neuralNetwork(datasets, 2500, .4, .6);
+        neuralNetwork(datasets, 5000, .4, .6);
+
+        boostedDecisiontree(datasets, (float).0);
+        boostedDecisiontree(datasets, (float).1);
+        boostedDecisiontree(datasets, (float).2);
+        boostedDecisiontree(datasets, (float).3);
+        boostedDecisiontree(datasets, (float).4);
+        boostedDecisiontree(datasets, (float).5);
+
+
+        SVM(datasets, new weka.classifiers.functions.supportVector.PolyKernel());
+        SVM(datasets, new weka.classifiers.functions.supportVector.RBFKernel());
+
+        KNN(datasets, 1);
+        KNN(datasets, 3);
+        KNN(datasets, 5);
+    }
+
+
+
+    private static void ClassifyandOutput(Classifier model, HashMap<String, Instances> datasets) throws Exception{
+        Instances train = datasets.get("train");
+        Instances test = datasets.get("test") ;
+
+
+        //cross validation
+        Evaluation eval = new Evaluation(train);
+        eval.crossValidateModel(model, train, 10, new Random(1));
+
+        System.out.println(eval.toSummaryString("\nCross Validation Results\n======\n", false));
+        System.out.println(eval.toMatrixString());
+
+        //build classifier
+        long start = System.currentTimeMillis();
+        model.buildClassifier(train);
+
+        long end = System.currentTimeMillis();
+        System.out.println("build classifier=" + (end - start));
+
+
+        Evaluation evalTest = new Evaluation(train);
+
+        start = System.currentTimeMillis();
+        evalTest.evaluateModel(model, test);
+        end = System.currentTimeMillis();
+        System.out.println("eval classifier=" + (end - start));
+
+
+        System.out.println(evalTest.toSummaryString("\nTesting Results\n======\n", false));
+        System.out.println(evalTest.toMatrixString());
     }
 
     private   static HashMap<String, Instances> getTrainingandTestInstances(String dataset) throws IOException {
@@ -72,8 +134,8 @@ public class Main {
 
         }else if (dataset.equals("Cancer")){
 
-             trainfile = readDataFile("datasets/adult_train.arff");
-             testfile = readDataFile("datasets/adult_test.arff");
+             trainfile = readDataFile("datasets/cancer_train.arff");
+             testfile = readDataFile("datasets/cancer_test.arff");
 
         }
 
@@ -90,58 +152,26 @@ public class Main {
         return retVal;
     }
 
-    private   static double decisionTree(HashMap<String, Instances> datasets, float confidence, boolean unpruned) throws Exception{
-
-
-
-        J48 model = new J48();
-
-        model.setUnpruned(unpruned);
-
-        model.setConfidenceFactor(confidence);
+    private static void decisionTree(HashMap<String, Instances> datasets, float confidence, boolean unpruned) throws Exception{
 
         Instances train = datasets.get("train");
         Instances test = datasets.get("test") ;
 
+        System.out.println("model=J48");
+        System.out.println("unpruned=" + unpruned);
+        System.out.println("confidence=" + confidence);
 
-        Evaluation evaluation = new Evaluation(train);
-
-
-        model.buildClassifier(train);
-
-
-        evaluation.evaluateModel(model, test);
-
+        J48 model = new J48();
+        model.setUnpruned(unpruned);
+        model.setConfidenceFactor(confidence);
 
 
-        System.out.println(evaluation.toSummaryString("\nResults\n======\n", false));
+        ClassifyandOutput(model, datasets);
 
-/*
-        // display classifier
-        final javax.swing.JFrame jf =
-                new javax.swing.JFrame("Weka Classifier Tree Visualizer: J48");
-        jf.setSize(1000,800);
-        jf.getContentPane().setLayout(new BorderLayout());
-        TreeVisualizer tv = new TreeVisualizer(null,
-                model.graph(),
-                new PlaceNode2());
-        jf.getContentPane().add(tv, BorderLayout.CENTER);
-        jf.addWindowListener(new java.awt.event.WindowAdapter() {
-            public void windowClosing(java.awt.event.WindowEvent e) {
-                jf.dispose();
-            }
-        });
-
-        jf.setVisible(true);
-        tv.fitToScreen();
-
-        */
-
-return 0;
 
     }
 
-    private   static Instances resample(Instances data) throws Exception {
+    private static Instances resample(Instances data) throws Exception {
 
 
         Resample r = new Resample();
@@ -152,144 +182,69 @@ return 0;
        return Filter.useFilter(data, r);
     }
 
-    private   static double neuralNetwork(HashMap<String, Instances> datasets) throws Exception{
+    private static void neuralNetwork(HashMap<String, Instances> datasets, int trainingTime, double momentum, double learning) throws Exception{
+
+        Instances train = datasets.get("train");
+        Instances test = datasets.get("test") ;
+
+        System.out.println("model=MultilayerPerceptron");
+        System.out.println("epochs=" + trainingTime);
+        System.out.println("momentum=" + momentum);
+        System.out.println("learning=" + learning);
+
 
         MultilayerPerceptron model = new MultilayerPerceptron();
 
+        model.setTrainingTime(trainingTime);
+        model.setMomentum(momentum);
+        model.setLearningRate(learning);
 
+        ClassifyandOutput(model, datasets);
 
-        Instances train = datasets.get("train");
-        Instances test = datasets.get("test") ;
-
-
-
-        Evaluation evaluation = new Evaluation(train);
-
-        model.buildClassifier(train);
-
-        evaluation.evaluateModel(model, test);
-
-        FastVector predictions = new FastVector();
-
-        predictions.appendElements(evaluation.predictions());
-
-        double correct= 0;
-        for (int i = 0; i < predictions.size(); i++) {
-            NominalPrediction np = (NominalPrediction) predictions.elementAt(i);
-            if (np.predicted() == np.actual()) {
-                correct++;
-            }
-        }
-
-
-        System.out.println(evaluation.toSummaryString("\nResults\n======\n", false));
-
-        return (100 * correct / predictions.size());
 
 
     }
 
-    private   static double boostedDecisiontree(HashMap<String, Instances> datasets) throws Exception{
+    private static void boostedDecisiontree(HashMap<String, Instances> datasets, float confidence) throws Exception{
+
+
+        System.out.println("model=AdaBoostM1");
+        System.out.println("confidence=" + confidence);
 
         AdaBoostM1 model = new AdaBoostM1();
 
-        Instances train = datasets.get("train");
-        Instances test = datasets.get("test") ;
+        J48 classifier = new J48();
+        classifier.setConfidenceFactor(confidence);
 
-        model.setClassifier(new J48());
+        model.setClassifier(classifier);
 
-        Evaluation evaluation = new Evaluation(train);
-
-        model.buildClassifier(train);
-
-        evaluation.evaluateModel(model, test);
-
-        FastVector predictions = new FastVector();
-
-        predictions.appendElements(evaluation.predictions());
-
-        double correct= 0;
-        for (int i = 0; i < predictions.size(); i++) {
-            NominalPrediction np = (NominalPrediction) predictions.elementAt(i);
-            if (np.predicted() == np.actual()) {
-                correct++;
-            }
-        }
-
-
-        System.out.println(evaluation.toSummaryString("\nResults\n======\n", false));
-
-        return (100 * correct / predictions.size());
+        ClassifyandOutput(model, datasets);
 
 
     }
 
-    private   static double svm(HashMap<String, Instances> datasets) throws Exception{
+    private static void SVM(HashMap<String, Instances> datasets, Kernel kernal) throws Exception{
+
+
+        System.out.println("model=SMO");
 
         SMO model = new SMO();
 
-        Instances train = datasets.get("train");
-        Instances test = datasets.get("test") ;
+        System.out.println("kernel=" + kernal);
+        model.setKernel(kernal);
 
-        model.setKernel(new weka.classifiers.functions.supportVector.PolyKernel());
-
-        Evaluation evaluation = new Evaluation(train);
-
-        model.buildClassifier(train);
-
-        evaluation.evaluateModel(model, test);
-
-        FastVector predictions = new FastVector();
-
-        predictions.appendElements(evaluation.predictions());
-
-        double correct= 0;
-        for (int i = 0; i < predictions.size(); i++) {
-            NominalPrediction np = (NominalPrediction) predictions.elementAt(i);
-            if (np.predicted() == np.actual()) {
-                correct++;
-            }
-        }
-
-
-        System.out.println(evaluation.toSummaryString("\nResults\n======\n", false));
-
-        return (100 * correct / predictions.size());
-
-
+        ClassifyandOutput(model, datasets);
     }
 
-    private static double knn(HashMap<String, Instances> datasets, int distance) throws Exception{
+    private static void KNN(HashMap<String, Instances> datasets, int distance) throws Exception{
 
+        System.out.println("model=KNN");
         IBk model = new IBk();
 
-        Instances train = datasets.get("train");
-        Instances test = datasets.get("test") ;
-
+        System.out.println("distance=" + distance);
         model.setKNN(distance);
 
-        Evaluation evaluation = new Evaluation(train);
-
-        model.buildClassifier(train);
-
-        evaluation.evaluateModel(model, test);
-
-        FastVector predictions = new FastVector();
-
-        predictions.appendElements(evaluation.predictions());
-
-        double correct= 0;
-        for (int i = 0; i < predictions.size(); i++) {
-            NominalPrediction np = (NominalPrediction) predictions.elementAt(i);
-            if (np.predicted() == np.actual()) {
-                correct++;
-            }
-        }
-
-
-        System.out.println(evaluation.toSummaryString("\nResults\n======\n", false));
-
-        return (100 * correct / predictions.size());
+        ClassifyandOutput(model, datasets);
 
 
     }
