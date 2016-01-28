@@ -1,47 +1,52 @@
 
-import java.awt.*;
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
+import java.io.*;
 
-import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Random;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
-import weka.classifiers.evaluation.NominalPrediction;
+
 import weka.classifiers.functions.MultilayerPerceptron;
 import weka.classifiers.functions.SMO;
 import weka.classifiers.functions.supportVector.Kernel;
 import weka.classifiers.lazy.IBk;
 import weka.classifiers.meta.AdaBoostM1;
 import weka.classifiers.trees.J48;
-import weka.core.FastVector;
 import weka.core.Instances;
 import weka.filters.Filter;
 import weka.filters.unsupervised.attribute.Remove;
 import weka.filters.unsupervised.instance.Resample;
-import weka.gui.treevisualizer.PlaceNode2;
-import weka.gui.treevisualizer.TreeVisualizer;
 
 
 public class Main {
 
+    static PrintWriter _logger= null;
+
+
     public static void main(String[] args) throws Exception {
 
+        DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
+        Date date = new Date();
+
+        String filename = "results" + dateFormat.format(date) + ".txt";
+        _logger = new PrintWriter(new FileOutputStream(filename), true);
+
         //split into training and test datasets
-        System.out.println("Adult Dataset");
+        Output("Adult Dataset");
         HashMap<String, Instances> datasets = getTrainingandTestInstances("Adult");
-       // RunLearningAlgorithms(datasets);
+       RunLearningAlgorithms(datasets);
 
 
         datasets.clear();
-        System.out.println("Cancer Dataset");
+        Output("Cancer Dataset");
         datasets = getTrainingandTestInstances("Cancer");
         RunLearningAlgorithms(datasets);
 
+        _logger.close();
 
     }
 
@@ -67,7 +72,7 @@ public class Main {
         neuralNetwork(datasets, 2500, .4, .6);
         neuralNetwork(datasets, 5000, .4, .6);
 
-        boostedDecisiontree(datasets, (float).0);
+        boostedDecisiontree(datasets, (float).01);
         boostedDecisiontree(datasets, (float).1);
         boostedDecisiontree(datasets, (float).2);
         boostedDecisiontree(datasets, (float).3);
@@ -82,6 +87,15 @@ public class Main {
         KNN(datasets, 3);
         KNN(datasets, 5);
     }
+    
+    
+    private static void Output(String message){
+        _logger.println(message);
+        System.out.println(message);
+        
+        
+        
+    }
 
 
 
@@ -92,17 +106,23 @@ public class Main {
 
         //cross validation
         Evaluation eval = new Evaluation(train);
+
+        long start = System.currentTimeMillis();
+
         eval.crossValidateModel(model, train, 10, new Random(1));
 
-        System.out.println(eval.toSummaryString("\nCross Validation Results\n======\n", false));
-        System.out.println(eval.toMatrixString());
+        long end = System.currentTimeMillis();
+        Output("cross train=" + (end - start));
+
+        Output(eval.toSummaryString("\nCross Validation Results\n======\n", false));
+        Output(eval.toMatrixString());
 
         //build classifier
-        long start = System.currentTimeMillis();
+        start = System.currentTimeMillis();
         model.buildClassifier(train);
 
-        long end = System.currentTimeMillis();
-        System.out.println("build classifier=" + (end - start));
+        end = System.currentTimeMillis();
+        Output("build classifier=" + (end - start));
 
 
         Evaluation evalTest = new Evaluation(train);
@@ -110,11 +130,11 @@ public class Main {
         start = System.currentTimeMillis();
         evalTest.evaluateModel(model, test);
         end = System.currentTimeMillis();
-        System.out.println("eval classifier=" + (end - start));
+        Output("eval classifier=" + (end - start));
 
 
-        System.out.println(evalTest.toSummaryString("\nTesting Results\n======\n", false));
-        System.out.println(evalTest.toMatrixString());
+        Output(evalTest.toSummaryString("\nTesting Results\n======\n", false));
+        Output(evalTest.toMatrixString());
     }
 
     private   static HashMap<String, Instances> getTrainingandTestInstances(String dataset) throws IOException {
@@ -129,7 +149,7 @@ public class Main {
 
         if (dataset.equals("Adult")){
 
-             trainfile = readDataFile("datasets/adult_train.arff");
+             trainfile = readDataFile("datasets/adult_train_sample.arff");
              testfile = readDataFile("datasets/adult_test.arff");
 
         }else if (dataset.equals("Cancer")){
@@ -157,9 +177,9 @@ public class Main {
         Instances train = datasets.get("train");
         Instances test = datasets.get("test") ;
 
-        System.out.println("model=J48");
-        System.out.println("unpruned=" + unpruned);
-        System.out.println("confidence=" + confidence);
+        Output("model=J48");
+        Output("unpruned=" + unpruned);
+        Output("confidence=" + confidence);
 
         J48 model = new J48();
         model.setUnpruned(unpruned);
@@ -187,10 +207,10 @@ public class Main {
         Instances train = datasets.get("train");
         Instances test = datasets.get("test") ;
 
-        System.out.println("model=MultilayerPerceptron");
-        System.out.println("epochs=" + trainingTime);
-        System.out.println("momentum=" + momentum);
-        System.out.println("learning=" + learning);
+        Output("model=MultilayerPerceptron");
+        Output("epochs=" + trainingTime);
+        Output("momentum=" + momentum);
+        Output("learning=" + learning);
 
 
         MultilayerPerceptron model = new MultilayerPerceptron();
@@ -208,8 +228,8 @@ public class Main {
     private static void boostedDecisiontree(HashMap<String, Instances> datasets, float confidence) throws Exception{
 
 
-        System.out.println("model=AdaBoostM1");
-        System.out.println("confidence=" + confidence);
+        Output("model=AdaBoostM1");
+        Output("confidence=" + confidence);
 
         AdaBoostM1 model = new AdaBoostM1();
 
@@ -226,11 +246,11 @@ public class Main {
     private static void SVM(HashMap<String, Instances> datasets, Kernel kernal) throws Exception{
 
 
-        System.out.println("model=SMO");
+        Output("model=SMO");
 
         SMO model = new SMO();
 
-        System.out.println("kernel=" + kernal);
+        Output("kernel=" + kernal);
         model.setKernel(kernal);
 
         ClassifyandOutput(model, datasets);
@@ -238,10 +258,10 @@ public class Main {
 
     private static void KNN(HashMap<String, Instances> datasets, int distance) throws Exception{
 
-        System.out.println("model=KNN");
+        Output("model=KNN");
         IBk model = new IBk();
 
-        System.out.println("distance=" + distance);
+        Output("distance=" + distance);
         model.setKNN(distance);
 
         ClassifyandOutput(model, datasets);
@@ -249,26 +269,7 @@ public class Main {
 
     }
 
-    private static Instances getAdultDataset() throws Exception{
 
-        Instances retVal;
-        BufferedReader datafile = readDataFile("datasets/adult.arff");
-
-
-        Instances data = new Instances(datafile);
-
-
-        data.setClassIndex(data.numAttributes() - 1);
-
-        Remove remove = new Remove();
-        remove.setAttributeIndices("3");
-
-        remove.setInputFormat(data);
-        retVal = Filter.useFilter(data, remove);
-
-        return retVal;
-
-    }
 
     private static BufferedReader readDataFile(String filename) {
         BufferedReader inputReader = null;
