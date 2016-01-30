@@ -3,6 +3,7 @@ import java.io.*;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Random;
@@ -18,39 +19,72 @@ import weka.classifiers.meta.AdaBoostM1;
 import weka.classifiers.trees.J48;
 import weka.core.Instances;
 import weka.filters.Filter;
-import weka.filters.unsupervised.attribute.Remove;
 import weka.filters.unsupervised.instance.Resample;
 
 
 public class Main {
 
     static PrintWriter _logger= null;
-
+static ArrayList<Integer> m= new ArrayList<>();
 
     public static void main(String[] args) throws Exception {
 
+        m.add(100);
+        m.add(80);
+        m.add(60);
+        m.add(40);
+        m.add(20);
+        m.add(5);
+        
+        
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
         Date date = new Date();
 
         String filename = "results" + dateFormat.format(date) + ".txt";
         _logger = new PrintWriter(new FileOutputStream(filename), true);
 
-        //split into training and test datasets
-        Output("Adult Dataset");
-        HashMap<String, Instances> datasets = getTrainingandTestInstances("Adult");
-       RunLearningAlgorithms(datasets);
-
-
-        datasets.clear();
         Output("Cancer Dataset");
-        datasets = getTrainingandTestInstances("Cancer");
-        RunLearningAlgorithms(datasets);
+        HashMap<String, BufferedReader> files  = getFiles("Cancer");
+        ResampleAndRun(files);
 
+
+/*
+        datasets.clear();
+
+        Output("Adult Dataset");
+        datasets = getTrainingandTestInstances("Adult");
+        RunLearningAlgorithms(datasets);
+*/
         _logger.close();
 
     }
 
-    public static void RunLearningAlgorithms( HashMap<String, Instances> datasets) throws Exception {
+    public static void ResampleAndRun(HashMap<String, BufferedReader> files) throws  Exception{
+
+        Instances trainOrig = new Instances(files.get("train"));
+        Instances testOrig = new Instances(files.get("test"));
+
+        for (int i = 0; i<= m.size()-1 ; i++ ){
+
+            HashMap<String, Instances[]> datasets;
+            Instances train = Resample(trainOrig, m.get(i));
+            Instances test  = Resample(testOrig, m.get(i));
+
+            train.setClassIndex(train.numAttributes() - 1);
+            test.setClassIndex(test.numAttributes() - 1);
+
+            datasets = CrossValidate(train, 10);
+            datasets.put("testing", new Instances[] {test});
+            datasets.put("training", new Instances[] {train});
+
+
+            RunLearningAlgorithms(datasets);
+
+
+        }
+    }
+
+    public static void RunLearningAlgorithms(HashMap<String, Instances[]> datasets) throws Exception {
 
 
         decisionTree(datasets, (float)0, true);
@@ -62,15 +96,16 @@ public class Main {
         decisionTree(datasets, (float).4, false);
         decisionTree(datasets, (float).5, false);
 
+
         neuralNetwork(datasets, 500, .2, .3);
         neuralNetwork(datasets, 1000, .2, .3);
         neuralNetwork(datasets, 2500, .2, .3);
         neuralNetwork(datasets, 5000, .2, .3);
 
-        neuralNetwork(datasets, 500, .4, .6);
-        neuralNetwork(datasets, 1000, .4, .6);
-        neuralNetwork(datasets, 2500, .4, .6);
-        neuralNetwork(datasets, 5000, .4, .6);
+        neuralNetwork(datasets, 500, .5, .5);
+        neuralNetwork(datasets, 1000, .5, .5);
+        neuralNetwork(datasets, 2500, .5, .5);
+        neuralNetwork(datasets, 5000, .5, .5);
 
         boostedDecisiontree(datasets, (float).01);
         boostedDecisiontree(datasets, (float).1);
@@ -92,125 +127,164 @@ public class Main {
     private static void Output(String message){
         _logger.println(message);
         System.out.println(message);
-        
-        
-        
+
+    }
+
+    private static Instances Resample(Instances dataset, int percentage) throws Exception {
+
+        Resample r = new Resample();
+        r.setNoReplacement(true);
+        r.setSampleSizePercent(percentage);
+        r.setInputFormat(dataset);
+
+        return Filter.useFilter(dataset, r);
+
     }
 
 
 
-    private static void ClassifyandOutput(Classifier model, HashMap<String, Instances> datasets) throws Exception{
-        Instances train = datasets.get("train");
-        Instances test = datasets.get("test") ;
+    public static Instances[][] crossValidationSplit(Instances data, int numberOfFolds) {
+        Instances[][] split = new Instances[2][numberOfFolds];
+
+        for (int i = 0; i < numberOfFolds; i++) {
+            split[0][i] = data.trainCV(numberOfFolds, i);
+            split[1][i] = data.testCV(numberOfFolds, i);
+        }
+
+        return split;
+    }
 
 
-        //cross validation
-        Evaluation eval = new Evaluation(train);
+    private static void ClassifyandOutput(Classifier model, HashMap<String, Instances[]> datasets, String desc) throws Exception{
+
+
+        Instances[] trainingSplits = datasets.get("trainingSplits");
+        Instances[] testingSplits = datasets.get("testingSplits") ;
+        Instances testing = datasets.get("testing")[0];
+        Instances training = datasets.get("training")[0];
+
+
+        for (int i = 0; i < trainingSplits.length; i++) {
+            long buildTime= 0;
+            long evalTime = 0;
+            Evaluation eval = new Evaluation(trainingSplits[i]);
+
+            long start = System.currentTimeMillis();
+
+            model.buildClassifier(trainingSplits[i]);
+
+            long end = System.currentTimeMillis();
+           buildTime =(end - start);
+
+
+            start = System.currentTimeMillis();
+            eval.evaluateModel(model, testingSplits[i]);
+            end = System.currentTimeMillis();
+            evalTime =  (end - start);
+
+
+            Output(desc + ",cross validation," + i + "," + eval.numInstances() + "," + buildTime + "," + evalTime + "," + eval.pctCorrect());
+            /*
+
+            Output(eval.toSummaryString("\nTesting Results for i=" + i + "\n======\n", false));
+            Output(eval.toMatrixString());
+            */
+        }
+
+        long buildTime= 0;
+        long evalTime = 0;
+        Evaluation eval = new Evaluation(training);
 
         long start = System.currentTimeMillis();
 
-        eval.crossValidateModel(model, train, 10, new Random(1));
+        model.buildClassifier(training);
 
         long end = System.currentTimeMillis();
-        Output("cross train=" + (end - start));
+        buildTime =(end - start);
 
-        Output(eval.toSummaryString("\nCross Validation Results\n======\n", false));
-        Output(eval.toMatrixString());
-
-        //build classifier
-        start = System.currentTimeMillis();
-        model.buildClassifier(train);
-
-        end = System.currentTimeMillis();
-        Output("build classifier=" + (end - start));
-
-
-        Evaluation evalTest = new Evaluation(train);
 
         start = System.currentTimeMillis();
-        evalTest.evaluateModel(model, test);
+        eval.evaluateModel(model, testing);
         end = System.currentTimeMillis();
-        Output("eval classifier=" + (end - start));
+        evalTime =  (end - start);
 
 
-        Output(evalTest.toSummaryString("\nTesting Results\n======\n", false));
-        Output(evalTest.toMatrixString());
+        Output(desc + ",testing," + "0" + "," + eval.numInstances() + "," + buildTime + "," + evalTime + "," + eval.pctCorrect());
+
+
     }
 
-    private   static HashMap<String, Instances> getTrainingandTestInstances(String dataset) throws IOException {
 
+    private static  HashMap<String, BufferedReader> getFiles(String dataset) throws IOException{
 
-        HashMap<String, Instances> retVal = new HashMap<>();
-        Instances train;
-        Instances test;
+        HashMap<String, BufferedReader> retVal = new HashMap<>();
+
         BufferedReader trainfile = null;
         BufferedReader testfile = null;
 
+        Instances train;
+        Instances test;
 
         if (dataset.equals("Adult")){
 
-             trainfile = readDataFile("datasets/adult_train_sample.arff");
-             testfile = readDataFile("datasets/adult_test.arff");
+            trainfile = readDataFile("datasets/adult_train_sample.arff");
+            testfile = readDataFile("datasets/adult_test.arff");
 
         }else if (dataset.equals("Cancer")){
 
-             trainfile = readDataFile("datasets/cancer_train.arff");
-             testfile = readDataFile("datasets/cancer_test.arff");
+            trainfile = readDataFile("datasets/cancer_train.arff");
+            testfile = readDataFile("datasets/cancer_test.arff");
 
         }
 
 
-        train = new Instances(trainfile);
-        test = new Instances(testfile);
+        retVal.put("train", trainfile);
+        retVal.put("test", testfile);
 
-        train.setClassIndex(train.numAttributes() - 1);
-        test.setClassIndex(test.numAttributes() - 1);
+        return retVal;
 
-        retVal.put("train", train);
-        retVal.put("test", test);
+
+    }
+
+    private static HashMap<String, Instances[]> CrossValidate(Instances train, int folds) throws IOException {
+        HashMap<String, Instances[]> retVal = new HashMap<>();
+
+
+        // Do 10-split cross validation
+        Instances[][] split = crossValidationSplit(train, folds);
+
+        // Separate split into training and testing arrays
+        Instances[] trainingSplits = split[0];
+        Instances[] testingSplits = split[1];
+
+
+        retVal.put("trainingSplits", trainingSplits);
+        retVal.put("testingSplits", testingSplits);
+
+
 
         return retVal;
     }
 
-    private static void decisionTree(HashMap<String, Instances> datasets, float confidence, boolean unpruned) throws Exception{
 
-        Instances train = datasets.get("train");
-        Instances test = datasets.get("test") ;
 
-        Output("model=J48");
-        Output("unpruned=" + unpruned);
-        Output("confidence=" + confidence);
+
+    private static void decisionTree(HashMap<String, Instances[]> datasets, float confidence, boolean unpruned) throws Exception{
+
 
         J48 model = new J48();
         model.setUnpruned(unpruned);
         model.setConfidenceFactor(confidence);
 
+        String desc = model.getClass().getName()  + "," + unpruned + "," + confidence;
 
-        ClassifyandOutput(model, datasets);
-
+        ClassifyandOutput(model, datasets, desc);
 
     }
 
-    private static Instances resample(Instances data) throws Exception {
 
 
-        Resample r = new Resample();
-        r.setNoReplacement(true);
-        r.setSampleSizePercent(5);
-        r.setInputFormat(data);
-
-       return Filter.useFilter(data, r);
-    }
-
-    private static void neuralNetwork(HashMap<String, Instances> datasets, int trainingTime, double momentum, double learning) throws Exception{
-
-        Instances train = datasets.get("train");
-        Instances test = datasets.get("test") ;
-
-        Output("model=MultilayerPerceptron");
-        Output("epochs=" + trainingTime);
-        Output("momentum=" + momentum);
-        Output("learning=" + learning);
+    private static void neuralNetwork(HashMap<String, Instances[]> datasets, int trainingTime, double momentum, double learning) throws Exception{
 
 
         MultilayerPerceptron model = new MultilayerPerceptron();
@@ -219,17 +293,17 @@ public class Main {
         model.setMomentum(momentum);
         model.setLearningRate(learning);
 
-        ClassifyandOutput(model, datasets);
+        String desc = model.getClass().getName() + "," + trainingTime + "," + momentum + "," + learning;
+
+        ClassifyandOutput(model, datasets, desc);
 
 
 
     }
 
-    private static void boostedDecisiontree(HashMap<String, Instances> datasets, float confidence) throws Exception{
+    private static void boostedDecisiontree(HashMap<String, Instances[]> datasets, float confidence) throws Exception{
 
 
-        Output("model=AdaBoostM1");
-        Output("confidence=" + confidence);
 
         AdaBoostM1 model = new AdaBoostM1();
 
@@ -238,33 +312,32 @@ public class Main {
 
         model.setClassifier(classifier);
 
-        ClassifyandOutput(model, datasets);
+        String desc = model.getClass().getName() + "," + confidence;
+
+        ClassifyandOutput(model, datasets, desc);
 
 
     }
 
-    private static void SVM(HashMap<String, Instances> datasets, Kernel kernal) throws Exception{
-
-
-        Output("model=SMO");
+    private static void SVM(HashMap<String, Instances[]> datasets, Kernel kernal) throws Exception{
 
         SMO model = new SMO();
-
-        Output("kernel=" + kernal);
         model.setKernel(kernal);
 
-        ClassifyandOutput(model, datasets);
+        String desc = model.getClass().getName() + "," + kernal.getClass().getName();
+
+        ClassifyandOutput(model, datasets, desc);
     }
 
-    private static void KNN(HashMap<String, Instances> datasets, int distance) throws Exception{
+    private static void KNN(HashMap<String, Instances[]> datasets, int distance) throws Exception{
 
-        Output("model=KNN");
+
         IBk model = new IBk();
 
-        Output("distance=" + distance);
-        model.setKNN(distance);
 
-        ClassifyandOutput(model, datasets);
+        model.setKNN(distance);
+        String desc = model.getClass().getName() + "," + distance;
+        ClassifyandOutput(model, datasets, desc);
 
 
     }
