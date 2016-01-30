@@ -3,10 +3,9 @@ import java.io.*;
 
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
+
 import java.util.Date;
 import java.util.HashMap;
-import java.util.Random;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
@@ -25,17 +24,10 @@ import weka.filters.unsupervised.instance.Resample;
 public class Main {
 
     static PrintWriter _logger= null;
-static ArrayList<Integer> m= new ArrayList<>();
+
 
     public static void main(String[] args) throws Exception {
 
-        m.add(100);
-        m.add(80);
-        m.add(60);
-        m.add(40);
-        m.add(20);
-        m.add(5);
-        
         
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
         Date date = new Date();
@@ -47,14 +39,12 @@ static ArrayList<Integer> m= new ArrayList<>();
         HashMap<String, BufferedReader> files  = getFiles("Cancer");
         ResampleAndRun(files);
 
-
-/*
-        datasets.clear();
+        files.clear();
 
         Output("Adult Dataset");
-        datasets = getTrainingandTestInstances("Adult");
-        RunLearningAlgorithms(datasets);
-*/
+        files  = getFiles("Adult");
+        ResampleAndRun(files);
+
         _logger.close();
 
     }
@@ -64,11 +54,11 @@ static ArrayList<Integer> m= new ArrayList<>();
         Instances trainOrig = new Instances(files.get("train"));
         Instances testOrig = new Instances(files.get("test"));
 
-        for (int i = 0; i<= m.size()-1 ; i++ ){
+        for (int i = 100; i>0 ; i = i -10 ){
 
             HashMap<String, Instances[]> datasets;
-            Instances train = Resample(trainOrig, m.get(i));
-            Instances test  = Resample(testOrig, m.get(i));
+            Instances train = Resample(trainOrig, i);
+            Instances test  = Resample(testOrig, i);
 
             train.setClassIndex(train.numAttributes() - 1);
             test.setClassIndex(test.numAttributes() - 1);
@@ -87,14 +77,22 @@ static ArrayList<Integer> m= new ArrayList<>();
     public static void RunLearningAlgorithms(HashMap<String, Instances[]> datasets) throws Exception {
 
 
-        decisionTree(datasets, (float)0, true);
+        decisionTree(datasets, (float)0, true, 2);
+        decisionTree(datasets, (float)0, true, 4);
 
-        decisionTree(datasets, (float).01, false);
-        decisionTree(datasets, (float).1, false);
-        decisionTree(datasets, (float).2, false);
-        decisionTree(datasets, (float).3, false);
-        decisionTree(datasets, (float).4, false);
-        decisionTree(datasets, (float).5, false);
+        decisionTree(datasets, (float).01, false,2);
+        decisionTree(datasets, (float).1, false,2);
+        decisionTree(datasets, (float).2, false,2);
+        decisionTree(datasets, (float).3, false,2);
+        decisionTree(datasets, (float).4, false,2);
+        decisionTree(datasets, (float).5, false,2);
+
+        decisionTree(datasets, (float).01, false,4);
+        decisionTree(datasets, (float).1, false,4);
+        decisionTree(datasets, (float).2, false,4);
+        decisionTree(datasets, (float).3, false,4);
+        decisionTree(datasets, (float).4, false,4);
+        decisionTree(datasets, (float).5, false,4);
 
 
         neuralNetwork(datasets, 500, .2, .3);
@@ -107,12 +105,21 @@ static ArrayList<Integer> m= new ArrayList<>();
         neuralNetwork(datasets, 2500, .5, .5);
         neuralNetwork(datasets, 5000, .5, .5);
 
-        boostedDecisiontree(datasets, (float).01);
-        boostedDecisiontree(datasets, (float).1);
-        boostedDecisiontree(datasets, (float).2);
-        boostedDecisiontree(datasets, (float).3);
-        boostedDecisiontree(datasets, (float).4);
-        boostedDecisiontree(datasets, (float).5);
+        boostedDecisiontree(datasets, (float).01,2);
+        boostedDecisiontree(datasets, (float).1,2);
+        boostedDecisiontree(datasets, (float).2,2);
+        boostedDecisiontree(datasets, (float).3,2);
+        boostedDecisiontree(datasets, (float).4,2);
+        boostedDecisiontree(datasets, (float).5,2);
+
+
+
+        boostedDecisiontree(datasets, (float).01,4);
+        boostedDecisiontree(datasets, (float).1,4);
+        boostedDecisiontree(datasets, (float).2,4);
+        boostedDecisiontree(datasets, (float).3,4);
+        boostedDecisiontree(datasets, (float).4,4);
+        boostedDecisiontree(datasets, (float).5,4);
 
 
         SVM(datasets, new weka.classifiers.functions.supportVector.PolyKernel());
@@ -183,7 +190,7 @@ static ArrayList<Integer> m= new ArrayList<>();
             evalTime =  (end - start);
 
 
-            Output(desc + ",cross validation," + i + "," + eval.numInstances() + "," + buildTime + "," + evalTime + "," + eval.pctCorrect());
+            Output(desc + ",cross validation," + i + "," + trainingSplits[i].numInstances() + "," + eval.numInstances() + "," + buildTime + "," + evalTime + "," + eval.pctCorrect());
             /*
 
             Output(eval.toSummaryString("\nTesting Results for i=" + i + "\n======\n", false));
@@ -209,8 +216,9 @@ static ArrayList<Integer> m= new ArrayList<>();
         evalTime =  (end - start);
 
 
-        Output(desc + ",testing," + "0" + "," + eval.numInstances() + "," + buildTime + "," + evalTime + "," + eval.pctCorrect());
+        Output(desc + ",testing," + "0" + "," + training.numInstances() + "," + eval.numInstances() + "," + buildTime + "," + evalTime + "," + eval.pctCorrect());
 
+        Output(eval.toMatrixString());
 
     }
 
@@ -269,14 +277,15 @@ static ArrayList<Integer> m= new ArrayList<>();
 
 
 
-    private static void decisionTree(HashMap<String, Instances[]> datasets, float confidence, boolean unpruned) throws Exception{
+    private static void decisionTree(HashMap<String, Instances[]> datasets, float confidence, boolean unpruned, int minInstancePerLeaf) throws Exception{
 
 
         J48 model = new J48();
         model.setUnpruned(unpruned);
         model.setConfidenceFactor(confidence);
+        model.setMinNumObj(minInstancePerLeaf);
 
-        String desc = model.getClass().getName()  + "," + unpruned + "," + confidence;
+        String desc = model.getClass().getName()  + "," + unpruned + "," + confidence + "," + minInstancePerLeaf;
 
         ClassifyandOutput(model, datasets, desc);
 
@@ -301,7 +310,7 @@ static ArrayList<Integer> m= new ArrayList<>();
 
     }
 
-    private static void boostedDecisiontree(HashMap<String, Instances[]> datasets, float confidence) throws Exception{
+    private static void boostedDecisiontree(HashMap<String, Instances[]> datasets, float confidence, int minInstancePerLeaf) throws Exception{
 
 
 
@@ -309,6 +318,7 @@ static ArrayList<Integer> m= new ArrayList<>();
 
         J48 classifier = new J48();
         classifier.setConfidenceFactor(confidence);
+        classifier.setMinNumObj(minInstancePerLeaf);
 
         model.setClassifier(classifier);
 
