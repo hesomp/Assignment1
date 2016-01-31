@@ -24,7 +24,7 @@ import weka.filters.unsupervised.instance.Resample;
 public class Main {
 
     static PrintWriter _logger= null;
-
+    static String _currentDataset = null;
 
     public static void main(String[] args) throws Exception {
 
@@ -35,14 +35,15 @@ public class Main {
         String filename = "results" + dateFormat.format(date) + ".txt";
         _logger = new PrintWriter(new FileOutputStream(filename), true);
 
-        Output("Cancer Dataset");
-        HashMap<String, BufferedReader> files  = getFiles("Cancer");
+
+        _currentDataset = "Cancer";
+        HashMap<String, BufferedReader> files  = getFiles(_currentDataset);
         ResampleAndRun(files);
 
         files.clear();
 
-        Output("Adult Dataset");
-        files  = getFiles("Adult");
+        _currentDataset = "Adult";
+        files  = getFiles(_currentDataset);
         ResampleAndRun(files);
 
         _logger.close();
@@ -53,6 +54,7 @@ public class Main {
 
         Instances trainOrig = new Instances(files.get("train"));
         Instances testOrig = new Instances(files.get("test"));
+
 
         for (int i = 100; i>0 ; i = i -10 ){
 
@@ -95,23 +97,12 @@ public class Main {
         decisionTree(datasets, (float).5, false,4);
 
 
-        neuralNetwork(datasets, 500, .2, .3);
-        neuralNetwork(datasets, 1000, .2, .3);
-        neuralNetwork(datasets, 2500, .2, .3);
-        neuralNetwork(datasets, 5000, .2, .3);
-
-        neuralNetwork(datasets, 500, .5, .5);
-        neuralNetwork(datasets, 1000, .5, .5);
-        neuralNetwork(datasets, 2500, .5, .5);
-        neuralNetwork(datasets, 5000, .5, .5);
-
         boostedDecisiontree(datasets, (float).01,2);
         boostedDecisiontree(datasets, (float).1,2);
         boostedDecisiontree(datasets, (float).2,2);
         boostedDecisiontree(datasets, (float).3,2);
         boostedDecisiontree(datasets, (float).4,2);
         boostedDecisiontree(datasets, (float).5,2);
-
 
 
         boostedDecisiontree(datasets, (float).01,4);
@@ -128,6 +119,20 @@ public class Main {
         KNN(datasets, 1);
         KNN(datasets, 3);
         KNN(datasets, 5);
+        KNN(datasets, 7);
+
+
+        /*
+        neuralNetwork(datasets, 500, .2, .3);
+        neuralNetwork(datasets, 1000, .2, .3);
+        neuralNetwork(datasets, 2500, .2, .3);
+        neuralNetwork(datasets, 5000, .2, .3);
+
+        neuralNetwork(datasets, 500, .5, .5);
+        neuralNetwork(datasets, 1000, .5, .5);
+        neuralNetwork(datasets, 2500, .5, .5);
+        neuralNetwork(datasets, 5000, .5, .5);
+*/
     }
     
     
@@ -170,33 +175,27 @@ public class Main {
         Instances testing = datasets.get("testing")[0];
         Instances training = datasets.get("training")[0];
 
+        double cvPercentageSum = 0;
+
+
+
+        //cross validation
 
         for (int i = 0; i < trainingSplits.length; i++) {
             long buildTime= 0;
             long evalTime = 0;
             Evaluation eval = new Evaluation(trainingSplits[i]);
 
-            long start = System.currentTimeMillis();
 
             model.buildClassifier(trainingSplits[i]);
 
-            long end = System.currentTimeMillis();
-           buildTime =(end - start);
-
-
-            start = System.currentTimeMillis();
             eval.evaluateModel(model, testingSplits[i]);
-            end = System.currentTimeMillis();
-            evalTime =  (end - start);
 
+            cvPercentageSum = cvPercentageSum + eval.pctCorrect();
 
-            Output(desc + ",cross validation," + i + "," + trainingSplits[i].numInstances() + "," + eval.numInstances() + "," + buildTime + "," + evalTime + "," + eval.pctCorrect());
-            /*
-
-            Output(eval.toSummaryString("\nTesting Results for i=" + i + "\n======\n", false));
-            Output(eval.toMatrixString());
-            */
         }
+
+        //testing
 
         long buildTime= 0;
         long evalTime = 0;
@@ -216,9 +215,9 @@ public class Main {
         evalTime =  (end - start);
 
 
-        Output(desc + ",testing," + "0" + "," + training.numInstances() + "," + eval.numInstances() + "," + buildTime + "," + evalTime + "," + eval.pctCorrect());
+        Output(_currentDataset + "," + desc + "," + training.numInstances() + "," + eval.numInstances() + "," + buildTime + "," + evalTime + "," + eval.pctCorrect() + "," + (cvPercentageSum/trainingSplits.length));
 
-        Output(eval.toMatrixString());
+        //Output(eval.toMatrixString());
 
     }
 
@@ -236,7 +235,7 @@ public class Main {
         if (dataset.equals("Adult")){
 
             trainfile = readDataFile("datasets/adult_train_sample.arff");
-            testfile = readDataFile("datasets/adult_test.arff");
+            testfile = readDataFile("datasets/adult_test_sample.arff");
 
         }else if (dataset.equals("Cancer")){
 
@@ -322,7 +321,7 @@ public class Main {
 
         model.setClassifier(classifier);
 
-        String desc = model.getClass().getName() + "," + confidence;
+        String desc = model.getClass().getName() + "," + confidence + "," + minInstancePerLeaf + ", N/A";
 
         ClassifyandOutput(model, datasets, desc);
 
@@ -334,7 +333,7 @@ public class Main {
         SMO model = new SMO();
         model.setKernel(kernal);
 
-        String desc = model.getClass().getName() + "," + kernal.getClass().getName();
+        String desc = model.getClass().getName() + "," + kernal.getClass().getName() + ", N/A, N/A";
 
         ClassifyandOutput(model, datasets, desc);
     }
@@ -346,7 +345,7 @@ public class Main {
 
 
         model.setKNN(distance);
-        String desc = model.getClass().getName() + "," + distance;
+        String desc = model.getClass().getName() + "," + distance + ",N/A, N/A";
         ClassifyandOutput(model, datasets, desc);
 
 
