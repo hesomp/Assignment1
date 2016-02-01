@@ -25,32 +25,51 @@ public class Main {
 
     static PrintWriter _logger= null;
     static String _currentDataset = null;
+    static String _modelNum= null;
 
     public static void main(String[] args) throws Exception {
 
-        
+
         DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmmss");
         Date date = new Date();
 
         String filename = "results" + dateFormat.format(date) + ".txt";
         _logger = new PrintWriter(new FileOutputStream(filename), true);
 
+        if (args.length >=2){
+            String model = args[1];
 
-        _currentDataset = "Cancer";
-        HashMap<String, BufferedReader> files  = getFiles(_currentDataset);
-        ResampleAndRun(files);
+            if (args.length == 3){
+                _modelNum = args[2];
+            }
 
-        files.clear();
 
-        _currentDataset = "Adult";
-        files  = getFiles(_currentDataset);
-        ResampleAndRun(files);
+            _currentDataset = args[0];
+            HashMap<String, BufferedReader> files  = getFiles(_currentDataset);
+            ResampleAndRun(files, model);
+
+
+        }else{
+            //run all models on both datasets
+            _currentDataset = "Cancer";
+            HashMap<String, BufferedReader> files  = getFiles(_currentDataset);
+            ResampleAndRun(files, "all");
+
+            files.clear();
+
+            _currentDataset = "Adult";
+            files  = getFiles(_currentDataset);
+            ResampleAndRun(files, "all");
+
+        }
+
+
 
         _logger.close();
 
     }
 
-    public static void ResampleAndRun(HashMap<String, BufferedReader> files) throws  Exception{
+    public static void ResampleAndRun(HashMap<String, BufferedReader> files, String model) throws  Exception{
 
         Instances trainOrig = new Instances(files.get("train"));
         Instances testOrig = new Instances(files.get("test"));
@@ -70,69 +89,106 @@ public class Main {
             datasets.put("training", new Instances[] {train});
 
 
-            RunLearningAlgorithms(datasets);
+            if (model.equals("all")){
+                RunLearningAlgorithm(datasets, "dt");
+                RunLearningAlgorithm(datasets, "bdt");
+                RunLearningAlgorithm(datasets, "svm");
+                RunLearningAlgorithm(datasets, "knn");
+                RunLearningAlgorithm(datasets, "nn");
+
+            }else{
+                RunLearningAlgorithm(datasets, model);
+
+            }
+
+
+
 
 
         }
     }
 
-    public static void RunLearningAlgorithms(HashMap<String, Instances[]> datasets) throws Exception {
+    public static void RunLearningAlgorithm(HashMap<String, Instances[]> datasets, String model) throws Exception {
 
 
-        decisionTree(datasets, (float)0, true, 2);
-        decisionTree(datasets, (float)0, true, 4);
+        switch (model.toLowerCase()){
+            case "dt":
+                decisionTree(datasets, (float)0, true, 2);
+                decisionTree(datasets, (float)0, true, 4);
 
-        decisionTree(datasets, (float).01, false,2);
-        decisionTree(datasets, (float).1, false,2);
-        decisionTree(datasets, (float).2, false,2);
-        decisionTree(datasets, (float).3, false,2);
-        decisionTree(datasets, (float).4, false,2);
-        decisionTree(datasets, (float).5, false,2);
+                decisionTree(datasets, (float).01, false,2);
+                decisionTree(datasets, (float).1, false,2);
+                decisionTree(datasets, (float).2, false,2);
+                decisionTree(datasets, (float).3, false,2);
+                decisionTree(datasets, (float).4, false,2);
+                decisionTree(datasets, (float).5, false,2);
 
-        decisionTree(datasets, (float).01, false,4);
-        decisionTree(datasets, (float).1, false,4);
-        decisionTree(datasets, (float).2, false,4);
-        decisionTree(datasets, (float).3, false,4);
-        decisionTree(datasets, (float).4, false,4);
-        decisionTree(datasets, (float).5, false,4);
+                decisionTree(datasets, (float).01, false,4);
+                decisionTree(datasets, (float).1, false,4);
+                decisionTree(datasets, (float).2, false,4);
+                decisionTree(datasets, (float).3, false,4);
+                decisionTree(datasets, (float).4, false,4);
+                decisionTree(datasets, (float).5, false,4);
 
+                break;
+            case "bdt":
 
-        boostedDecisiontree(datasets, (float).01,2);
-        boostedDecisiontree(datasets, (float).1,2);
-        boostedDecisiontree(datasets, (float).2,2);
-        boostedDecisiontree(datasets, (float).3,2);
-        boostedDecisiontree(datasets, (float).4,2);
-        boostedDecisiontree(datasets, (float).5,2);
-
-
-        boostedDecisiontree(datasets, (float).01,4);
-        boostedDecisiontree(datasets, (float).1,4);
-        boostedDecisiontree(datasets, (float).2,4);
-        boostedDecisiontree(datasets, (float).3,4);
-        boostedDecisiontree(datasets, (float).4,4);
-        boostedDecisiontree(datasets, (float).5,4);
+                boostedDecisiontree(datasets, (float).01,2);
+                boostedDecisiontree(datasets, (float).1,2);
+                boostedDecisiontree(datasets, (float).2,2);
+                boostedDecisiontree(datasets, (float).3,2);
+                boostedDecisiontree(datasets, (float).4,2);
+                boostedDecisiontree(datasets, (float).5,2);
 
 
-        SVM(datasets, new weka.classifiers.functions.supportVector.PolyKernel());
-        SVM(datasets, new weka.classifiers.functions.supportVector.RBFKernel());
+                boostedDecisiontree(datasets, (float).01,4);
+                boostedDecisiontree(datasets, (float).1,4);
+                boostedDecisiontree(datasets, (float).2,4);
+                boostedDecisiontree(datasets, (float).3,4);
+                boostedDecisiontree(datasets, (float).4,4);
+                boostedDecisiontree(datasets, (float).5,4);
 
-        KNN(datasets, 1);
-        KNN(datasets, 3);
-        KNN(datasets, 5);
-        KNN(datasets, 7);
+                break;
+            case "svm":
+
+                if(_modelNum.equals(null)){
+                    SVM(datasets, new weka.classifiers.functions.supportVector.PolyKernel());
+                    SVM(datasets, new weka.classifiers.functions.supportVector.RBFKernel());
+                }else if (_modelNum.equals("1")){
+                    SVM(datasets, new weka.classifiers.functions.supportVector.PolyKernel());
+                }else if (_modelNum.equals("2")){
+                    SVM(datasets, new weka.classifiers.functions.supportVector.RBFKernel());
+                }
+
+                break;
+            case "knn":
+
+                KNN(datasets, 1);
+                KNN(datasets, 3);
+                KNN(datasets, 5);
+                KNN(datasets, 7);
+                break;
+            case "nn":
+
+                if(_modelNum.equals(null)){
+                    neuralNetwork(datasets, "");
+                    neuralNetwork(datasets, "a, 2, 5, 6");
+                }else if (_modelNum.equals("1")){
+                    neuralNetwork(datasets, "");
+                }else if (_modelNum.equals("2")){
+                    neuralNetwork(datasets, "a, 2, 5, 6");
+                }
 
 
-        /*
-        neuralNetwork(datasets, 500, .2, .3);
-        neuralNetwork(datasets, 1000, .2, .3);
-        neuralNetwork(datasets, 2500, .2, .3);
-        neuralNetwork(datasets, 5000, .2, .3);
 
-        neuralNetwork(datasets, 500, .5, .5);
-        neuralNetwork(datasets, 1000, .5, .5);
-        neuralNetwork(datasets, 2500, .5, .5);
-        neuralNetwork(datasets, 5000, .5, .5);
-*/
+
+            break;
+
+
+
+        }
+
+
     }
     
     
@@ -177,8 +233,6 @@ public class Main {
 
         double cvPercentageSum = 0;
 
-
-
         //cross validation
 
         for (int i = 0; i < trainingSplits.length; i++) {
@@ -215,7 +269,17 @@ public class Main {
         evalTime =  (end - start);
 
 
-        Output(_currentDataset + "," + desc + "," + training.numInstances() + "," + eval.numInstances() + "," + buildTime + "," + evalTime + "," + eval.pctCorrect() + "," + (cvPercentageSum/trainingSplits.length));
+        double numLeaves = 0;
+        double treeSize = 0;
+
+        if (model.getClass().getName().contains("J48")){
+           numLeaves =  ((J48)model).measureNumLeaves();
+            treeSize =  ((J48)model).measureTreeSize();
+        }
+
+
+        Output(_currentDataset + "," + desc + "," + training.numInstances() + "," + eval.numInstances() + "," + buildTime + "," +
+                evalTime + "," + eval.pctCorrect() + "," + (cvPercentageSum/trainingSplits.length) + "," + numLeaves + "," + treeSize);
 
         //Output(eval.toMatrixString());
 
@@ -232,12 +296,12 @@ public class Main {
         Instances train;
         Instances test;
 
-        if (dataset.equals("Adult")){
+        if (dataset.toLowerCase().equals("adult")){
 
-            trainfile = readDataFile("datasets/adult_train_sample.arff");
-            testfile = readDataFile("datasets/adult_test_sample.arff");
+            trainfile = readDataFile("datasets/adult_train.arff");
+            testfile = readDataFile("datasets/adult_test.arff");
 
-        }else if (dataset.equals("Cancer")){
+        }else if (dataset.toLowerCase().equals("cancer")){
 
             trainfile = readDataFile("datasets/cancer_train.arff");
             testfile = readDataFile("datasets/cancer_test.arff");
@@ -292,20 +356,17 @@ public class Main {
 
 
 
-    private static void neuralNetwork(HashMap<String, Instances[]> datasets, int trainingTime, double momentum, double learning) throws Exception{
+    private static void neuralNetwork(HashMap<String, Instances[]> datasets, String hiddenLayers) throws Exception{
 
 
         MultilayerPerceptron model = new MultilayerPerceptron();
+        if (!hiddenLayers.equals("")){
+            model.setHiddenLayers(hiddenLayers);
+        }
 
-        model.setTrainingTime(trainingTime);
-        model.setMomentum(momentum);
-        model.setLearningRate(learning);
 
-        String desc = model.getClass().getName() + "," + trainingTime + "," + momentum + "," + learning;
-
+        String desc = model.getClass().getName() + "," + model.getHiddenLayers().replace(",", "|") + ",N/A,N/A";
         ClassifyandOutput(model, datasets, desc);
-
-
 
     }
 
