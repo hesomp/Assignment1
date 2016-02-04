@@ -55,6 +55,7 @@ public class Main {
             HashMap<String, BufferedReader> files  = getFiles(_currentDataset);
             ResampleAndRun(files, "all");
 
+
             files.clear();
 
             _currentDataset = "Adult";
@@ -151,7 +152,7 @@ public class Main {
                 break;
             case "svm":
 
-                if(_modelNum.equals(null)){
+                if(_modelNum == null || _modelNum.equals(null)){
                     SVM(datasets, new weka.classifiers.functions.supportVector.PolyKernel());
                     SVM(datasets, new weka.classifiers.functions.supportVector.RBFKernel());
                 }else if (_modelNum.equals("1")){
@@ -170,7 +171,7 @@ public class Main {
                 break;
             case "nn":
 
-                if(_modelNum.equals(null)){
+                if(_modelNum == null || _modelNum.equals(null)){
                     neuralNetwork(datasets, "");
                     neuralNetwork(datasets, "a, 2, 5, 6");
                 }else if (_modelNum.equals("1")){
@@ -279,9 +280,12 @@ public class Main {
 
 
         Output(_currentDataset + "," + desc + "," + training.numInstances() + "," + eval.numInstances() + "," + buildTime + "," +
-                evalTime + "," + eval.pctCorrect() + "," + (cvPercentageSum/trainingSplits.length) + "," + numLeaves + "," + treeSize);
+               evalTime + "," + eval.pctCorrect() + "," + (cvPercentageSum/trainingSplits.length) + "," + numLeaves + "," + treeSize);
 
-        //Output(eval.toMatrixString());
+
+//        Output(_currentDataset + "," + desc);
+
+  //      Output(eval.toMatrixString());
 
     }
 
